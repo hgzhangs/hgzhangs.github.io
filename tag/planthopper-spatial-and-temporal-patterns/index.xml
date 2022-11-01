@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Planthopper; spatial and temporal patterns | Hongguo Zhang</title>
+    <link>https://hongguozhang.gitee.io/tag/planthopper-spatial-and-temporal-patterns/</link>
+      <atom:link href="https://hongguozhang.gitee.io/tag/planthopper-spatial-and-temporal-patterns/index.xml" rel="self" type="application/rss+xml" />
+    <description>Planthopper; spatial and temporal patterns</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Wed, 03 Aug 2022 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>https://hongguozhang.gitee.io/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>Planthopper; spatial and temporal patterns</title>
+      <link>https://hongguozhang.gitee.io/tag/planthopper-spatial-and-temporal-patterns/</link>
+    </image>
+    
+    <item>
+      <title>Mapping paddy rice in complex landscapes with Landsat time series data and superpixel-based deep learning method</title>
+      <link>https://hongguozhang.gitee.io/publication/mapping_paddy_rice_rs_2022/</link>
+      <pubDate>Wed, 03 Aug 2022 00:00:00 +0000</pubDate>
+      <guid>https://hongguozhang.gitee.io/publication/mapping_paddy_rice_rs_2022/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Spatial and temporal patterns of rice planthopper populations in South and Southwest China</title>
+      <link>https://hongguozhang.gitee.io/publication/article_rph_pattern/</link>
+      <pubDate>Fri, 11 Feb 2022 00:00:00 +0000</pubDate>
+      <guid>https://hongguozhang.gitee.io/publication/article_rph_pattern/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>
