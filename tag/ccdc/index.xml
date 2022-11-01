@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>CCDC | Hongguo Zhang</title>
+    <link>https://hongguozhang.gitee.io/tag/ccdc/</link>
+      <atom:link href="https://hongguozhang.gitee.io/tag/ccdc/index.xml" rel="self" type="application/rss+xml" />
+    <description>CCDC</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Tue, 07 Jul 2020 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>https://hongguozhang.gitee.io/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>CCDC</title>
+      <link>https://hongguozhang.gitee.io/tag/ccdc/</link>
+    </image>
+    
+    <item>
+      <title>Improving Land Cover Change Detection and Classification With BRDF Correction and Spatial Feature Extraction Using Landsat Time Series: A Case of Urbanization in Tianjin, China</title>
+      <link>https://hongguozhang.gitee.io/publication/guan_jstar/</link>
+      <pubDate>Tue, 07 Jul 2020 00:00:00 +0000</pubDate>
+      <guid>https://hongguozhang.gitee.io/publication/guan_jstar/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Design and implementation of a big data platform for precise application of rice pesticides and fertilizers</title>
+      <link>https://hongguozhang.gitee.io/publication/he_cai_2020_zh/</link>
+      <pubDate>Sat, 25 Jan 2020 00:00:00 +0000</pubDate>
+      <guid>https://hongguozhang.gitee.io/publication/he_cai_2020_zh/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>
