@@ -2,207 +2,207 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://hongguozhang.gitee.io/talk/example-talk/</loc>
+    <loc>https://hgzhangs.github.io/talk/example-talk/</loc>
     <lastmod>2030-06-01T13:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/</loc>
+    <loc>https://hgzhangs.github.io/</loc>
     <lastmod>2030-06-01T13:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
     <xhtml:link
                 rel="alternate"
                 hreflang="zh"
-                href="https://hongguozhang.gitee.io/zh/"
+                href="https://hgzhangs.github.io/zh/"
                 />
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
-                href="https://hongguozhang.gitee.io/"
+                href="https://hgzhangs.github.io/"
                 />
   </url><url>
-    <loc>https://hongguozhang.gitee.io/event/</loc>
+    <loc>https://hgzhangs.github.io/event/</loc>
     <lastmod>2030-06-01T13:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/publication-type/2/</loc>
+    <loc>https://hgzhangs.github.io/publication-type/2/</loc>
     <lastmod>2022-08-03T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/publication/mapping_paddy_rice_rs_2022/</loc>
+    <loc>https://hgzhangs.github.io/publication/mapping_paddy_rice_rs_2022/</loc>
     <lastmod>2022-08-03T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/planthopper-spatial-and-temporal-patterns/</loc>
+    <loc>https://hgzhangs.github.io/tag/planthopper-spatial-and-temporal-patterns/</loc>
     <lastmod>2022-08-03T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/publication_types/</loc>
-    <lastmod>2022-08-03T00:00:00+00:00</lastmod>
-    <changefreq>weekly</changefreq>
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hongguozhang.gitee.io/zh/publication_types/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hongguozhang.gitee.io/publication_types/"
-                />
-  </url><url>
-    <loc>https://hongguozhang.gitee.io/publication/</loc>
-    <lastmod>2022-08-03T00:00:00+00:00</lastmod>
-    <changefreq>weekly</changefreq>
-  </url><url>
-    <loc>https://hongguozhang.gitee.io/tags/</loc>
+    <loc>https://hgzhangs.github.io/publication_types/</loc>
     <lastmod>2022-08-03T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
     <xhtml:link
                 rel="alternate"
                 hreflang="zh"
-                href="https://hongguozhang.gitee.io/zh/tags/"
+                href="https://hgzhangs.github.io/zh/publication_types/"
                 />
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
-                href="https://hongguozhang.gitee.io/tags/"
+                href="https://hgzhangs.github.io/publication_types/"
                 />
   </url><url>
-    <loc>https://hongguozhang.gitee.io/publication/article_rph_pattern/</loc>
+    <loc>https://hgzhangs.github.io/publication/</loc>
+    <lastmod>2022-08-03T00:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+  </url><url>
+    <loc>https://hgzhangs.github.io/tags/</loc>
+    <lastmod>2022-08-03T00:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <xhtml:link
+                rel="alternate"
+                hreflang="zh"
+                href="https://hgzhangs.github.io/zh/tags/"
+                />
+    <xhtml:link
+                rel="alternate"
+                hreflang="en"
+                href="https://hgzhangs.github.io/tags/"
+                />
+  </url><url>
+    <loc>https://hgzhangs.github.io/publication/article_rph_pattern/</loc>
     <lastmod>2022-02-11T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/publication/an_rs_2021/</loc>
+    <loc>https://hgzhangs.github.io/publication/an_rs_2021/</loc>
     <lastmod>2021-08-11T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/hyperspectral/</loc>
+    <loc>https://hgzhangs.github.io/tag/hyperspectral/</loc>
     <lastmod>2021-08-11T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/rice-false-smunt/</loc>
+    <loc>https://hgzhangs.github.io/tag/rice-false-smunt/</loc>
     <lastmod>2021-08-11T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/uav/</loc>
+    <loc>https://hgzhangs.github.io/tag/uav/</loc>
     <lastmod>2021-08-11T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/academic/</loc>
+    <loc>https://hgzhangs.github.io/tag/academic/</loc>
     <lastmod>2020-12-13T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/categories/</loc>
+    <loc>https://hgzhangs.github.io/categories/</loc>
     <lastmod>2020-12-13T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
     <xhtml:link
                 rel="alternate"
                 hreflang="zh"
-                href="https://hongguozhang.gitee.io/zh/categories/"
+                href="https://hgzhangs.github.io/zh/categories/"
                 />
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
-                href="https://hongguozhang.gitee.io/categories/"
+                href="https://hgzhangs.github.io/categories/"
                 />
   </url><url>
-    <loc>https://hongguozhang.gitee.io/category/demo/</loc>
+    <loc>https://hgzhangs.github.io/category/demo/</loc>
     <lastmod>2020-12-13T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/post/</loc>
+    <loc>https://hgzhangs.github.io/post/</loc>
     <lastmod>2020-12-13T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/post/getting-started/</loc>
+    <loc>https://hgzhangs.github.io/post/getting-started/</loc>
     <lastmod>2020-12-13T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/%E5%BC%80%E6%BA%90/</loc>
+    <loc>https://hgzhangs.github.io/tag/%E5%BC%80%E6%BA%90/</loc>
     <lastmod>2020-12-13T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/category/%E6%95%99%E7%A8%8B/</loc>
+    <loc>https://hgzhangs.github.io/category/%E6%95%99%E7%A8%8B/</loc>
     <lastmod>2020-12-13T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/brdf/</loc>
+    <loc>https://hgzhangs.github.io/tag/brdf/</loc>
     <lastmod>2020-07-07T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/ccdc/</loc>
+    <loc>https://hgzhangs.github.io/tag/ccdc/</loc>
     <lastmod>2020-07-07T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/publication/guan_jstar/</loc>
+    <loc>https://hgzhangs.github.io/publication/guan_jstar/</loc>
     <lastmod>2020-07-07T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/urbanization/</loc>
+    <loc>https://hgzhangs.github.io/tag/urbanization/</loc>
     <lastmod>2020-07-07T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/publication/he_cai_2020_zh/</loc>
+    <loc>https://hgzhangs.github.io/publication/he_cai_2020_zh/</loc>
     <lastmod>2020-01-25T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/post/writing-technical-content/</loc>
+    <loc>https://hgzhangs.github.io/post/writing-technical-content/</loc>
     <lastmod>2019-07-12T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/post/jupyter/</loc>
+    <loc>https://hgzhangs.github.io/post/jupyter/</loc>
     <lastmod>2019-09-05T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/slides/</loc>
+    <loc>https://hgzhangs.github.io/slides/</loc>
     <lastmod>2019-02-05T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/slides/example/</loc>
+    <loc>https://hgzhangs.github.io/slides/example/</loc>
     <lastmod>2019-02-05T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/fsr/</loc>
+    <loc>https://hgzhangs.github.io/tag/fsr/</loc>
     <lastmod>2018-09-05T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/himawari-8/</loc>
+    <loc>https://hgzhangs.github.io/tag/himawari-8/</loc>
     <lastmod>2018-09-05T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/publication/liu_rs_2018/</loc>
+    <loc>https://hgzhangs.github.io/publication/liu_rs_2018/</loc>
     <lastmod>2018-09-05T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/privacy/</loc>
+    <loc>https://hgzhangs.github.io/privacy/</loc>
     <lastmod>2018-06-28T00:00:00+01:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/terms/</loc>
+    <loc>https://hgzhangs.github.io/terms/</loc>
     <lastmod>2018-06-28T00:00:00+01:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/deep-learning/</loc>
+    <loc>https://hgzhangs.github.io/tag/deep-learning/</loc>
     <lastmod>2016-04-27T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/tag/demo/</loc>
+    <loc>https://hgzhangs.github.io/tag/demo/</loc>
     <lastmod>2016-04-27T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/project/example/</loc>
+    <loc>https://hgzhangs.github.io/project/example/</loc>
     <lastmod>2016-04-27T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/project/external-project/</loc>
+    <loc>https://hgzhangs.github.io/project/external-project/</loc>
     <lastmod>2016-04-27T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/project/</loc>
+    <loc>https://hgzhangs.github.io/project/</loc>
     <lastmod>2016-04-27T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
   </url><url>
-    <loc>https://hongguozhang.gitee.io/admin/</loc>
+    <loc>https://hgzhangs.github.io/admin/</loc>
     <changefreq>weekly</changefreq>
   </url>
 </urlset>
