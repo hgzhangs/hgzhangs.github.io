@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>森林火险天气指数 (FWI) 计算模型</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f8fafc; }
+        .slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .gauge-container { position: relative; width: 300px; height: 150px; overflow: hidden; }
+        .gauge-bg { fill: none; stroke-width: 20; stroke-linecap: round; }
+        .needle { transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: 150px 140px; }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const katexOptions = {
+        delimiters: [
+            {left: '\\[', right: '\\]', display: true},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false,
+        strict: false,
+        trust: true
+    };
+
+    let renderTimeout;
+    function safeRender() {
+        if (renderTimeout) clearTimeout(renderTimeout);
+        renderTimeout = setTimeout(() => {
+            renderMathInElement(document.body, katexOptions);
+        }, 100);
+    }
+
+    renderMathInElement(document.body, katexOptions);
+
+    const observer = new MutationObserver((mutations) => {
+        let shouldRender = false;
+        mutations.forEach((mutation) => {
+            if (mutation.target &&
+                mutation.target.className &&
+                typeof mutation.target.className === 'string' &&
+                mutation.target.className.includes('katex')) {
+                return;
+            }
+            shouldRender = true;
+        });
+
+        if (shouldRender) {
+            safeRender();
+        }
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+    });
+
+    setInterval(() => {
+        const text = document.body.innerText;
+        if (text.includes('\\(') || text.includes('$$')) {
+            safeRender();
+        }
+    }, 2000);
+});
+</script>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-slate-800">森林火险天气指数 (FWI) 交互模拟</h1>
+            <p class="text-slate-600 mt-2">基于加拿大森林火险天气指数系统，通过气象因子评估火灾潜在风险</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Panel: Controls -->
+            <div class="lg:col-span-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-semibold mb-6 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                    气象因子调节
+                </h2>
+
+                <div class="space-y-8">
+                    <!-- Temp -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm font-medium text-slate-700">温度 (Temperature)</label>
+                            <span class="text-blue-600 font-bold" id="val-temp">25°C</span>
+                        </div>
+                        <input type="range" id="input-temp" min="-10" max="50" value="25" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                    </div>
+
+                    <!-- Humidity -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm font-medium text-slate-700">相对湿度 (Relative Humidity)</label>
+                            <span class="text-blue-600 font-bold" id="val-rh">45%</span>
+                        </div>
+                        <input type="range" id="input-rh" min="0" max="100" value="45" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                    </div>
+
+                    <!-- Wind -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm font-medium text-slate-700">风速 (Wind Speed)</label>
+                            <span class="text-blue-600 font-bold" id="val-wind">15 km/h</span>
+                        </div>
+                        <input type="range" id="input-wind" min="0" max="80" value="15" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                    </div>
+
+                    <!-- Rain -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm font-medium text-slate-700">24h 降水量 (Precipitation)</label>
+                            <span class="text-blue-600 font-bold" id="val-rain">0 mm</span>
+                        </div>
+                        <input type="range" id="input-rain" min="0" max="50" step="0.1" value="0" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                    </div>
+
+                    <!-- Drought Factor -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm font-medium text-slate-700">累计干旱时长 (Drought Days)</label>
+                            <span class="text-blue-600 font-bold" id="val-drought">5 天</span>
+                        </div>
+                        <input type="range" id="input-drought" min="0" max="60" value="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Panel: Visualization -->
+            <div class="lg:col-span-8 space-y-6">
+                <!-- Gauge Card -->
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center">
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">综合火险等级 (FWI)</h3>
+                    
+                    <div class="gauge-container mb-4">
+                        <svg viewBox="0 0 300 150">
+                            <path class="gauge-bg" d="M30 140 A120 120 0 0 1 270 140" stroke="#e2e8f0" />
+                            <path class="gauge-bg" d="M30 140 A120 120 0 0 1 90 44" stroke="#22c55e" /> <!-- Low -->
+                            <path class="gauge-bg" d="M90 44 A120 120 0 0 1 150 20" stroke="#eab308" /> <!-- Mod -->
+                            <path class="gauge-bg" d="M150 20 A120 120 0 0 1 210 44" stroke="#f97316" /> <!-- High -->
+                            <path class="gauge-bg" d="M210 44 A120 120 0 0 1 270 140" stroke="#ef4444" /> <!-- Extreme -->
+                            <g class="needle" id="gauge-needle">
+                                <line x1="150" y1="140" x2="150" y2="30" stroke="#1e293b" stroke-width="4" stroke-linecap="round" />
+                                <circle cx="150" cy="140" r="6" fill="#1e293b" />
+                            </g>
+                        </svg>
+                        <div class="absolute bottom-0 inset-x-0 text-center">
+                            <span id="fwi-score" class="text-4xl font-black text-slate-900">0.0</span>
+                            <div id="risk-label" class="text-sm font-bold uppercase tracking-wider mt-1">低危</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 w-full mt-4">
+                        <div class="text-center p-3 bg-slate-50 rounded-xl">
+                            <div class="text-xs text-slate-500 uppercase">细小可燃物水分 (FFMC)</div>
+                            <div id="val-ffmc" class="text-lg font-bold text-slate-800">85.0</div>
+                        </div>
+                        <div class="text-center p-3 bg-slate-50 rounded-xl">
+                            <div class="text-xs text-slate-500 uppercase">初始蔓延指数 (ISI)</div>
+                            <div id="val-isi" class="text-lg font-bold text-slate-800">5.2</div>
+                        </div>
+                        <div class="text-center p-3 bg-slate-50 rounded-xl">
+                            <div class="text-xs text-slate-500 uppercase">累积指数 (BUI)</div>
+                            <div id="val-bui" class="text-lg font-bold text-slate-800">12.4</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graph Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-sm font-semibold text-slate-600 mb-4 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        植被平衡含水率 (EMC) 与环境关系模拟
+                    </h3>
+                    <div class="relative h-48 w-full">
+                        <canvas id="moistureChart" class="w-full h-full"></canvas>
+                        <div class="absolute top-0 right-0 text-[10px] text-slate-400 bg-white/80 p-1">
+                            X: 湿度 (%) / Y: 平衡含水率 (%)
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-slate-500 leading-relaxed">
+                        当相对湿度 \(H < 30\%\) 且温度升高时，平衡含水率 \(EMC\) 呈非线性下降。计算公式：
+                        \[EMC = 0.0322 \cdot H^{1.5} \cdot e^{-0.001T} + 0.281 \cdot e^{0.0986H}\] (简化示意)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Warning Section -->
+        <div id="warning-box" class="mt-8 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl hidden fade-in">
+            <div class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <div>
+                    <h4 class="font-bold text-red-800">极端火险预警触发</h4>
+                    <p class="text-sm text-red-700">当前气象条件下，ISI (\(>15\)) 与 BUI (\(>40\)) 产生耦合效应，火势极易失控。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const inputs = {
+            temp: document.getElementById('input-temp'),
+            rh: document.getElementById('input-rh'),
+            wind: document.getElementById('input-wind'),
+            rain: document.getElementById('input-rain'),
+            drought: document.getElementById('input-drought')
+        };
+
+        const displays = {
+            temp: document.getElementById('val-temp'),
+            rh: document.getElementById('val-rh'),
+            wind: document.getElementById('val-wind'),
+            rain: document.getElementById('val-rain'),
+            drought: document.getElementById('val-drought'),
+            ffmc: document.getElementById('val-ffmc'),
+            isi: document.getElementById('val-isi'),
+            bui: document.getElementById('val-bui'),
+            fwi: document.getElementById('fwi-score'),
+            risk: document.getElementById('risk-label'),
+            needle: document.getElementById('gauge-needle'),
+            warning: document.getElementById('warning-box')
+        };
+
+        const canvas = document.getElementById('moistureChart');
+        const ctx = canvas.getContext('2d');
+
+        function calculateFWI() {
+            const T = parseFloat(inputs.temp.value);
+            const H = parseFloat(inputs.rh.value);
+            const W = parseFloat(inputs.wind.value);
+            const P = parseFloat(inputs.rain.value);
+            const D = parseFloat(inputs.drought.value);
+
+            // 1. FFMC Calculation (Fine Fuel Moisture Code)
+            // Initial FFMC base on weather
+            let mo = 147.2 * (101 - 85) / (59.5 + 85); // Dummy start
+            let rf = P > 2.8 ? P - 2.8 : 0; // Effective rain threshold
+            
+            // Equilibrium Moisture Content (EMC)
+            let ed = 0.942 * Math.pow(H, 0.679) + 11 * Math.exp((H - 100)/10) + 0.18 * (21.1 - T) * (1 - Math.exp(-0.115 * H));
+            let ew = 0.618 * Math.pow(H, 0.753) + 10 * Math.exp((H - 100)/10) + 0.18 * (21.1 - T) * (1 - Math.exp(-0.115 * H));
+            
+            // Simplified FFMC response
+            let ffmc_base = 59.5 * (250 - H) / (147.2 + H); // Very simplified for UI reactivity
+            let ffmc = 85 + (T - 20) * 0.2 - (H - 45) * 0.3 + (W * 0.1);
+            if (rf > 0) ffmc -= Math.log(rf + 1) * 15; // Rain deduction
+            ffmc = Math.min(Math.max(ffmc, 0), 99);
+
+            // 2. ISI (Initial Spread Index) - Wind gain effect
+            let fw = Math.exp(0.05039 * W);
+            let fm = 147.2 * (101 - ffmc) / (59.5 + ffmc);
+            let ff = 91.9 * Math.exp(-0.1386 * fm) * (1 + Math.pow(fm, 5.31) / 4.93e7);
+            let isi = 0.208 * fw * ff;
+
+            // 3. BUI (Buildup Index) - Cumulative effect
+            // We use drought days as a proxy for DMC/DC
+            let bui = D * 1.5 + (T > 0 ? T * 0.1 : 0) - (rf * 0.5);
+            bui = Math.max(bui, 0);
+
+            // 4. FWI (Forest Fire Weather Index) - Non-linear scaling
+            let fwi = 0;
+            if (bui <= 80) {
+                fwi = isi * (0.626 * Math.pow(bui, 0.809) + 2);
+            } else {
+                fwi = isi * (1000 / (25 + 108.64 * Math.exp(-0.023 * bui)));
+            }
+            fwi = fwi / 10; // Scaling for 0-50+ range
+
+            updateUI(ffmc, isi, bui, fwi);
+            drawChart(T);
+        }
+
+        function updateUI(ffmc, isi, bui, fwi) {
+            displays.temp.innerText = `${inputs.temp.value}°C`;
+            displays.rh.innerText = `${inputs.rh.value}%`;
+            displays.wind.innerText = `${inputs.wind.value} km/h`;
+            displays.rain.innerText = `${inputs.rain.value} mm`;
+            displays.drought.innerText = `${inputs.drought.value} 天`;
+
+            displays.ffmc.innerText = ffmc.toFixed(1);
+            displays.isi.innerText = isi.toFixed(1);
+            displays.bui.innerText = bui.toFixed(1);
+            displays.fwi.innerText = fwi.toFixed(1);
+
+            // Gauge Rotation: -90deg to 90deg
+            let angle = Math.min(fwi * 3.6 - 90, 90);
+            displays.needle.style.transform = `rotate(${angle}deg)`;
+
+            // Risk Level
+            let color = "#22c55e";
+            let label = "低危 (Low)";
+            if (fwi > 15 && fwi <= 30) { color = "#eab308"; label = "中危 (Moderate)"; }
+            else if (fwi > 30 && fwi <= 45) { color = "#f97316"; label = "高危 (High)"; }
+            else if (fwi > 45) { color = "#ef4444"; label = "极高危 (Extreme)"; }
+            
+            displays.fwi.style.color = color;
+            displays.risk.innerText = label;
+            displays.risk.style.color = color;
+
+            if (fwi > 40) {
+                displays.warning.classList.remove('hidden');
+            } else {
+                displays.warning.classList.add('hidden');
+            }
+        }
+
+        function drawChart(currentTemp) {
+            const w = canvas.width = canvas.offsetWidth * 2;
+            const h = canvas.height = canvas.offsetHeight * 2;
+            ctx.clearRect(0, 0, w, h);
+            ctx.scale(2, 2);
+            
+            const drawW = w/2;
+            const drawH = h/2;
+
+            // Grid
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for(let i=0; i<=10; i++) {
+                ctx.moveTo(i * drawW/10, 0); ctx.lineTo(i * drawW/10, drawH);
+                ctx.moveTo(0, i * drawH/10); ctx.lineTo(drawW, i * drawH/10);
+            }
+            ctx.stroke();
+
+            // Curve: EMC vs Humidity
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for(let x=0; x<=100; x++) {
+                // Simplified EMC formula for visualization
+                let rh = x;
+                let emc = 0.0322 * Math.pow(rh, 1.5) * Math.exp(-0.001 * currentTemp) + 0.2 * Math.exp(0.04 * rh);
+                let canvasX = (x / 100) * drawW;
+                let canvasY = drawH - (emc / 30) * drawH;
+                if(x===0) ctx.moveTo(canvasX, canvasY);
+                else ctx.lineTo(canvasX, canvasY);
+            }
+            ctx.stroke();
+
+            // Current Point
+            let curRH = parseFloat(inputs.rh.value);
+            let curEMC = 0.0322 * Math.pow(curRH, 1.5) * Math.exp(-0.001 * currentTemp) + 0.2 * Math.exp(0.04 * curRH);
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc((curRH/100)*drawW, drawH - (curEMC/30)*drawH, 5, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // Event Listeners
+        Object.values(inputs).forEach(input => {
+            input.addEventListener('input', calculateFWI);
+        });
+
+        // Initialize
+        window.onload = () => {
+            calculateFWI();
+            // Handle responsiveness
+            window.addEventListener('resize', () => drawChart(parseFloat(inputs.temp.value)));
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>森林火险等级动态关联模拟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f8fafc; }
+        .gauge-container { position: relative; width: 300px; height: 150px; overflow: hidden; }
+        .gauge-bg { width: 300px; height: 300px; border-radius: 50%; border: 20px solid #e2e8f0; border-bottom-color: transparent; border-left-color: transparent; transform: rotate(-45deg); }
+        .needle {
+            position: absolute; bottom: 0; left: 50%; width: 4px; height: 110px;
+            background: #1e293b; transform-origin: bottom center;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 20; border-radius: 4px;
+        }
+        .needle::after {
+            content: ''; position: absolute; bottom: -8px; left: -6px;
+            width: 16px; height: 16px; background: #1e293b; border-radius: 50%;
+        }
+        .level-arc {
+            position: absolute; top: 0; left: 0; width: 300px; height: 300px;
+            border-radius: 50%; border: 20px solid transparent;
+            border-bottom-color: transparent; border-left-color: transparent;
+            transform: rotate(-45deg); pointer-events: none;
+        }
+        .slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 18px; height: 18px; background: #10b981;
+            cursor: pointer; border-radius: 50%; border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+    </style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const katexOptions = {
+        delimiters: [
+            {left: '\\[', right: '\\]', display: true},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false,
+        strict: false,
+        trust: true
+    };
+
+    let renderTimeout;
+    function safeRender() {
+        if (renderTimeout) clearTimeout(renderTimeout);
+        renderTimeout = setTimeout(() => {
+            renderMathInElement(document.body, katexOptions);
+        }, 100);
+    }
+
+    renderMathInElement(document.body, katexOptions);
+
+    const observer = new MutationObserver((mutations) => {
+        let shouldRender = false;
+        mutations.forEach((mutation) => {
+            if (mutation.target &&
+                mutation.target.className &&
+                typeof mutation.target.className === 'string' &&
+                mutation.target.className.includes('katex')) {
+                return;
+            }
+            shouldRender = true;
+        });
+
+        if (shouldRender) {
+            safeRender();
+        }
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+    });
+
+    setInterval(() => {
+        const text = document.body.innerText;
+        if (text.includes('\\(') || text.includes('$$')) {
+            safeRender();
+        }
+    }, 2000);
+});
+</script>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex items-center justify-center">
+    <div class="max-w-5xl w-full bg-white rounded-3xl shadow-2xl p-6 md:p-10 border border-slate-100">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-slate-800 mb-2">森林火险等级动态模拟</h1>
+            <p class="text-slate-500">探究气象因子对火险等级的非线性耦合影响</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <!-- Left Panel: Controls -->
+            <div class="space-y-8 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <!-- Temperature -->
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <span class="w-8 h-8 flex items-center justify-center bg-orange-100 text-orange-600 rounded-lg">🌡️</span>
+                            环境温度 (T)
+                        </label>
+                        <span class="text-lg font-mono font-bold text-orange-600" id="val-temp">25°C</span>
+                    </div>
+                    <input type="range" id="input-temp" min="-5" max="50" value="25" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                </div>
+
+                <!-- Humidity -->
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <span class="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-600 rounded-lg">💧</span>
+                            相对湿度 (H)
+                        </label>
+                        <span class="text-lg font-mono font-bold text-blue-600" id="val-hum">50%</span>
+                    </div>
+                    <input type="range" id="input-hum" min="5" max="100" value="50" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                </div>
+
+                <!-- Drought Days -->
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <span class="w-8 h-8 flex items-center justify-center bg-yellow-100 text-yellow-600 rounded-lg">📅</span>
+                            连续无雨天数 (D)
+                        </label>
+                        <span class="text-lg font-mono font-bold text-yellow-600" id="val-days">5 天</span>
+                    </div>
+                    <input type="range" id="input-days" min="0" max="30" value="5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                </div>
+
+                <!-- Wind Scale -->
+                <div class="space-y-3">
+                    <label class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                        <span class="w-8 h-8 flex items-center justify-center bg-teal-100 text-teal-600 rounded-lg">💨</span>
+                        风力等级 (Wind Scale)
+                    </label>
+                    <div class="grid grid-cols-6 gap-2" id="wind-buttons">
+                        <!-- JS will inject buttons here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Visualization -->
+            <div class="flex flex-col items-center justify-center space-y-8">
+                <div class="relative">
+                    <div class="gauge-container">
+                        <div class="gauge-bg"></div>
+                        <!-- Color Sectors -->
+                        <div class="level-arc border-green-500" style="clip-path: inset(0 50% 50% 0);"></div>
+                        <div class="needle" id="gauge-needle"></div>
+                    </div>
+                    <!-- Legend Labels -->
+                    <div class="absolute inset-0 flex items-end justify-between px-2 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <span>一级 (低)</span>
+                        <span>五级 (极高)</span>
+                    </div>
+                </div>
+
+                <div class="text-center space-y-2">
+                    <div class="text-sm font-bold text-slate-400 uppercase tracking-widest">当前火险等级</div>
+                    <div id="risk-level-tag" class="text-5xl font-black py-2 px-6 rounded-2xl inline-block transition-all duration-300">
+                        3 级
+                    </div>
+                    <div id="risk-desc" class="text-xl font-bold text-slate-700">中度危险</div>
+                </div>
+
+                <div id="advice-card" class="w-full bg-white border-l-4 p-4 rounded-r-xl shadow-sm">
+                    <p class="text-sm text-slate-600 italic" id="advice-text"></p>
+                </div>
+
+                <!-- Formula Context -->
+                <div class="text-[11px] text-slate-400 bg-slate-50 p-3 rounded-lg w-full">
+                    计算模型依据 McArthur 森林火险指数 (FFDI) 简化公式：
+                    <div class="mt-1">
+                        \[F = 2.0 \cdot \exp(-0.45 + 0.987 \cdot \ln(D) - 0.0345 \cdot H + 0.0338 \cdot T + 0.0234 \cdot V)\]
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const elements = {
+            temp: document.getElementById('input-temp'),
+            hum: document.getElementById('input-hum'),
+            days: document.getElementById('input-days'),
+            valTemp: document.getElementById('val-temp'),
+            valHum: document.getElementById('val-hum'),
+            valDays: document.getElementById('val-days'),
+            windContainer: document.getElementById('wind-buttons'),
+            needle: document.getElementById('gauge-needle'),
+            levelTag: document.getElementById('risk-level-tag'),
+            levelDesc: document.getElementById('risk-desc'),
+            adviceCard: document.getElementById('advice-card'),
+            adviceText: document.getElementById('advice-text')
+        };
+
+        let currentWind = 2; // Default wind scale
+
+        const riskLevels = [
+            { level: 1, label: "一级 (低)", color: "bg-green-500", border: "border-green-600", text: "text-green-700", desc: "低度危险", advice: "森林火险天气，林内可燃物难以点燃。可以进行正常的生产活动。" },
+            { level: 2, label: "二级 (较低)", color: "bg-blue-400", border: "border-blue-500", text: "text-blue-700", desc: "较低危险", advice: "林内可燃物可以点燃，需加强巡山护林，注意野外用火安全。" },
+            { level: 3, label: "三级 (中)", color: "bg-yellow-400", border: "border-yellow-500", text: "text-yellow-700", desc: "中度危险", advice: "林内可燃物较易点燃。禁止在林区乱扔烟头，严格管控生产性用火。" },
+            { level: 4, label: "四级 (高)", color: "bg-orange-500", border: "border-orange-600", text: "text-orange-700", desc: "高度危险", advice: "极易起火。林区进入防火临战状态，严禁一切野外用火，设点检查物资。" },
+            { level: 5, label: "五级 (极高)", color: "bg-red-600", border: "border-red-700", text: "text-white", desc: "极高危险", advice: "极其危险，一旦起火极难扑救。封闭火险区，严禁任何人员携带火源进入。" }
+        ];
+
+        function initWindButtons() {
+            for (let i = 0; i <= 10; i += 2) {
+                const btn = document.createElement('button');
+                btn.className = `p-2 text-xs font-bold rounded-lg border transition-all ${i === currentWind ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200 hover:border-teal-400'}`;
+                btn.textContent = i + '级';
+                btn.onclick = () => {
+                    currentWind = i;
+                    document.querySelectorAll('#wind-buttons button').forEach((b, idx) => {
+                        const val = idx * 2;
+                        b.className = `p-2 text-xs font-bold rounded-lg border transition-all ${val === currentWind ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200 hover:border-teal-400'}`;
+                    });
+                    update();
+                };
+                elements.windContainer.appendChild(btn);
+            }
+        }
+
+        function calculateFFDI(t, h, d, wScale) {
+            // Scientific Constraint: Rainless Days = 0 means Level 1 immediately
+            if (d <= 0) return 1.0;
+
+            // Beaufort to km/h conversion for standard formulas
+            // Simplified: v_kmh = wScale * 4 (Rough linear approximation for the exponential model)
+            const v = wScale * 5; 
+
+            // McArthur FFDI-like logic
+            // F = 2.0 * exp(-0.45 + 0.987 * ln(D) - 0.0345 * H + 0.0338 * T + 0.0234 * V)
+            // Adjusting V weight based on Humidity constraint: higher weight in low humidity
+            const windWeightFactor = h < 30 ? 1.5 : (h > 60 ? 0.7 : 1.0);
+            
+            const logD = Math.log(Math.max(d, 0.5));
+            const exponent = -0.45 + (0.987 * logD) - (0.0345 * h) + (0.0338 * t) + (0.0234 * v * windWeightFactor);
+            let f = 2.0 * Math.exp(exponent);
+
+            // Constraint: High humidity (H > 80) caps risk
+            if (h > 80) f = Math.min(f, 11); // Map to level 1-2
+
+            return f;
+        }
+
+        function mapFFDIToLevel(f) {
+            // Mapping continuous FFDI to discrete 1-5 levels
+            // FFDI < 5: 1, 5-12: 2, 12-24: 3, 24-50: 4, >50: 5
+            if (f < 5) return 1;
+            if (f < 12) return 2;
+            if (f < 24) return 3;
+            if (f < 45) return 4;
+            return 5;
+        }
+
+        function update() {
+            const t = parseFloat(elements.temp.value);
+            const h = parseFloat(elements.hum.value);
+            const d = parseInt(elements.days.value);
+
+            elements.valTemp.textContent = t + '°C';
+            elements.valHum.textContent = h + '%';
+            elements.valDays.textContent = d + ' 天';
+
+            const ffdi = calculateFFDI(t, h, d, currentWind);
+            const levelIdx = mapFFDIToLevel(ffdi) - 1;
+            const data = riskLevels[levelIdx];
+
+            // Update UI
+            const rotation = -90 + (levelIdx * 45); // -90 to 90 degrees range
+            elements.needle.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+
+            elements.levelTag.textContent = data.level + ' 级';
+            elements.levelTag.className = `text-5xl font-black py-2 px-6 rounded-2xl inline-block transition-all duration-300 ${data.color} ${data.text}`;
+            elements.levelDesc.textContent = data.desc;
+            elements.levelDesc.className = `text-xl font-bold ${data.text.replace('white', 'slate-700')}`;
+            
+            elements.adviceCard.className = `w-full bg-white border-l-4 p-4 rounded-r-xl shadow-sm ${data.border}`;
+            elements.adviceText.textContent = data.advice;
+        }
+
+        [elements.temp, elements.hum, elements.days].forEach(el => el.oninput = update);
+        
+        initWindButtons();
+        update();
+    </script>
+</body>
+</html>

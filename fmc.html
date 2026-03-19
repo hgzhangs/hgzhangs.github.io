@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>可燃物含水率物理模拟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f8fafc; overflow-x: hidden; }
+        .canvas-container { position: relative; width: 100%; height: 320px; background: #1a1a1a; border-radius: 12px; overflow: hidden; }
+        .slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 1.5rem;
+            width: 1.5rem;
+            border-radius: 50%;
+            background: #ef4444;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+        .data-card { transition: all 0.3s ease; }
+        .formula-box { font-family: 'Times New Roman', serif; }
+    </style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const katexOptions = {
+        delimiters: [
+            {left: '\\[', right: '\\]', display: true},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false,
+        strict: false,
+        trust: true
+    };
+
+    let renderTimeout;
+    function safeRender() {
+        if (renderTimeout) clearTimeout(renderTimeout);
+        renderTimeout = setTimeout(() => {
+            renderMathInElement(document.body, katexOptions);
+        }, 100);
+    }
+
+    renderMathInElement(document.body, katexOptions);
+
+    const observer = new MutationObserver((mutations) => {
+        let shouldRender = false;
+        mutations.forEach((mutation) => {
+            if (mutation.target &&
+                mutation.target.className &&
+                typeof mutation.target.className === 'string' &&
+                mutation.target.className.includes('katex')) {
+                return;
+            }
+            shouldRender = true;
+        });
+
+        if (shouldRender) {
+            safeRender();
+        }
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+    });
+
+    setInterval(() => {
+        const text = document.body.innerText;
+        if (text.includes('\\(') || text.includes('$$')) {
+            safeRender();
+        }
+    }, 2000);
+});
+</script>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-5xl mx-auto space-y-6">
+        <!-- Header -->
+        <header class="text-center">
+            <h1 class="text-3xl font-bold text-gray-800">可燃物含水率 (FMC) 与林火行为</h1>
+            <p class="text-gray-600 mt-2">探索水分如何通过热汇效应和能量平衡抑制火焰蔓延</p>
+        </header>
+
+        <!-- Main Simulation Container -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Controls and Stats -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                    <label class="block text-sm font-medium text-gray-700 mb-4">
+                        含水率 (MC): <span id="mc-value" class="text-xl font-bold text-blue-600">10%</span>
+                    </label>
+                    <input type="range" id="mc-slider" min="0" max="50" step="1" value="10" 
+                           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb">
+                    
+                    <div class="mt-8 space-y-4">
+                        <button id="ignite-btn" class="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-orange-200">
+                            尝试点火
+                        </button>
+                        <button id="reset-btn" class="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium rounded-xl transition-colors">
+                            重置模拟
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 space-y-4">
+                    <h3 class="font-bold text-gray-800 border-b pb-2">物理实时数据</h3>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">点火延迟:</span>
+                        <span id="stat-delay" class="font-mono font-bold text-red-500">0.5s</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">蔓延速度 (ROS):</span>
+                        <span id="stat-ros" class="font-mono font-bold text-orange-500">1.2 m/s</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">有效热值 (H_net):</span>
+                        <span id="stat-hnet" class="font-mono font-bold text-blue-500">16.5 MJ/kg</span>
+                    </div>
+                    <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                        <div id="damping-bar" class="bg-green-500 h-full transition-all duration-300" style="width: 80%"></div>
+                    </div>
+                    <p class="text-[10px] text-gray-400 text-center uppercase tracking-wider">水分抑制系数 (\(f_M\))</p>
+                </div>
+            </div>
+
+            <!-- Visualization Canvas -->
+            <div class="lg:col-span-2 space-y-4">
+                <div class="canvas-container shadow-inner">
+                    <canvas id="fireCanvas"></canvas>
+                    <div id="status-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span id="status-text" class="text-white text-2xl font-bold opacity-0 transition-opacity bg-black/40 px-6 py-2 rounded-full"></span>
+                    </div>
+                    <!-- Legend -->
+                    <div class="absolute bottom-4 left-4 flex space-x-4 text-[10px] text-white/70">
+                        <div class="flex items-center"><span class="w-3 h-3 bg-orange-500 rounded-full mr-1"></span> 活火头</div>
+                        <div class="flex items-center"><span class="w-3 h-3 bg-gray-600 rounded-full mr-1"></span> 已碳化</div>
+                        <div class="flex items-center"><span class="w-3 h-3 bg-blue-300 rounded-full mr-1"></span> 水蒸气</div>
+                    </div>
+                </div>
+
+                <!-- Concept Note -->
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <h4 class="text-blue-800 font-bold text-sm mb-2 italic">科学原理解析：</h4>
+                    <p class="text-xs text-blue-700 leading-relaxed">
+                        根据Rothermel模型，水分的抑制作用主要体现在<b>热汇效应</b>。点火前必须消耗能量使液态水升温至100°C并产生相变。
+                        当含水率 \(MC > 30\%\)（临界值）时，水分蒸发吸收的潜热 \(L_v\) 过大，导致热反馈不足以维持燃烧链式反应。
+                    </p>
+                    <div class="mt-3 text-[11px] font-mono text-blue-900">
+                        \[Q_{ig} = M_{dry} C_p (T_{ig} - T_0) + M_{water} (C_w (100 - T_0) + L_v)\]
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('fireCanvas');
+        const ctx = canvas.getContext('2d');
+        const mcSlider = document.getElementById('mc-slider');
+        const mcDisplay = document.getElementById('mc-value');
+        const igniteBtn = document.getElementById('ignite-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const statusText = document.getElementById('status-text');
+
+        // Physics Constants
+        const MC_EXT = 0.30; // 30% extinction threshold
+        const L_V = 2260;    // Latent heat of vaporization (kJ/kg)
+        const H_DRY = 18.5;  // Dry fuel heat content (MJ/kg)
+        const CP_DRY = 1.4;  // Specific heat dry (kJ/kg.K)
+        const CP_W = 4.18;   // Specific heat water (kJ/kg.K)
+        const T_IG = 300;    // Ignition temp (C)
+        const T_0 = 25;      // Ambient temp (C)
+
+        let animationId;
+        let isBurning = false;
+        let particles = [];
+        let progress = 0;
+        let mc = 0.1;
+        let fuelSegments = [];
+        const segmentCount = 40;
+
+        function initFuel() {
+            fuelSegments = [];
+            for (let i = 0; i < segmentCount; i++) {
+                fuelSegments.push({
+                    x: (canvas.width / segmentCount) * i,
+                    temp: T_0,
+                    status: 'unburnt', // unburnt, heating, burning, charred
+                    moisture: mc,
+                    burnLevel: 0
+                });
+            }
+        }
+
+        function resize() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            initFuel();
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function calculateMetrics(m) {
+            // Rothermel Damping Coefficient (f_M)
+            const r = m / MC_EXT;
+            let fM = 0;
+            if (m < MC_EXT) {
+                fM = 1 - 2.59 * r + 5.11 * Math.pow(r, 2) - 3.52 * Math.pow(r, 3);
+            }
+            
+            // Effective heat value
+            const hNet = H_DRY - (m * L_V / 1000);
+            
+            // Ignition Delay (Non-linear increase)
+            const delay = 0.2 * Math.exp(m * 8);
+            
+            // Rate of Spread
+            const ros = Math.max(0, 2.5 * fM);
+
+            return { fM, hNet, delay, ros };
+        }
+
+        function updateUI() {
+            const m = parseInt(mcSlider.value) / 100;
+            mc = m;
+            mcDisplay.innerText = `${mcSlider.value}%`;
+            
+            const metrics = calculateMetrics(m);
+            document.getElementById('stat-delay').innerText = `${metrics.delay.toFixed(2)}s`;
+            document.getElementById('stat-ros').innerText = `${metrics.ros.toFixed(2)} m/s`;
+            document.getElementById('stat-hnet').innerText = `${metrics.hNet.toFixed(2)} MJ/kg`;
+            document.getElementById('damping-bar').style.width = `${metrics.fM * 100}%`;
+            
+            if (m >= MC_EXT) {
+                document.getElementById('damping-bar').classList.replace('bg-green-500', 'bg-red-500');
+            } else {
+                document.getElementById('damping-bar').classList.replace('bg-red-500', 'bg-green-500');
+            }
+        }
+
+        mcSlider.addEventListener('input', () => {
+            updateUI();
+            if (!isBurning) initFuel();
+        });
+
+        function createParticle(x, y, type) {
+            return {
+                x: x + (Math.random() - 0.5) * 20,
+                y: y,
+                vx: (Math.random() - 0.5) * 1,
+                vy: -Math.random() * 3 - 1,
+                life: 1.0,
+                size: Math.random() * 4 + 2,
+                type: type // 'fire', 'smoke', 'steam'
+            };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const segW = canvas.width / segmentCount;
+            const metrics = calculateMetrics(mc);
+
+            // Draw fuel bed
+            fuelSegments.forEach((seg, i) => {
+                let color = '#3d5a2a'; // Unburnt green/brown
+                if (seg.status === 'charred') color = '#1a1a1a';
+                if (seg.status === 'burning') color = '#e65100';
+                if (seg.status === 'heating') {
+                    const r = Math.floor(61 + (seg.temp/T_IG) * 150);
+                    color = `rgb(${r}, 90, 42)`;
+                }
+
+                ctx.fillStyle = color;
+                ctx.fillRect(seg.x, canvas.height - 40, segW - 1, 30);
+                
+                // Heating/Burning Logic
+                if (isBurning) {
+                    if (seg.status === 'heating') {
+                        const heatGain = 10 * (1 - mc/MC_EXT);
+                        seg.temp += heatGain;
+                        if (seg.temp >= T_IG) {
+                            if (mc >= MC_EXT) {
+                                seg.status = 'charred';
+                                showStatus("无法引燃：水分过高", "text-blue-400");
+                                isBurning = false;
+                            } else {
+                                seg.status = 'burning';
+                            }
+                        }
+                    }
+
+                    if (seg.status === 'burning') {
+                        seg.burnLevel += 0.01;
+                        // Emit fire particles
+                        if (Math.random() > 0.3) particles.push(createParticle(seg.x + segW/2, canvas.height - 50, 'fire'));
+                        // Emit steam if moist
+                        if (mc > 0.05 && Math.random() < mc) particles.push(createParticle(seg.x + segW/2, canvas.height - 60, 'steam'));
+                        
+                        if (seg.burnLevel > 1.0) {
+                            seg.status = 'charred';
+                        }
+                        
+                        // Spread to next
+                        if (i < segmentCount - 1 && seg.burnLevel > 0.2 && fuelSegments[i+1].status === 'unburnt') {
+                            fuelSegments[i+1].status = 'heating';
+                        }
+                    }
+                }
+            });
+
+            // Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                if (p.type === 'fire') {
+                    ctx.fillStyle = `rgba(255, ${Math.floor(p.life * 200)}, 0, ${p.life})`;
+                } else if (p.type === 'steam') {
+                    ctx.fillStyle = `rgba(200, 220, 255, ${p.life * 0.6})`;
+                } else {
+                    ctx.fillStyle = `rgba(100, 100, 100, ${p.life * 0.5})`;
+                }
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * (p.type === 'steam' ? 2 : 1), 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            if (isBurning) {
+                animationId = requestAnimationFrame(draw);
+            } else {
+                // Keep drawing static state or final particles
+                if (particles.length > 0) {
+                    animationId = requestAnimationFrame(draw);
+                }
+            }
+        }
+
+        function showStatus(text, colorClass) {
+            statusText.innerText = text;
+            statusText.className = `text-2xl font-bold px-6 py-2 rounded-full transition-opacity bg-black/60 ${colorClass}`;
+            statusText.style.opacity = "1";
+            setTimeout(() => { statusText.style.opacity = "0"; }, 3000);
+        }
+
+        igniteBtn.onclick = () => {
+            if (isBurning) return;
+            initFuel();
+            fuelSegments[0].status = 'heating';
+            isBurning = true;
+            
+            const m = parseInt(mcSlider.value) / 100;
+            if (m >= MC_EXT) {
+                showStatus("灭火：含水率达到临界点", "text-blue-300");
+            } else {
+                showStatus("引燃中...", "text-orange-400");
+            }
+            draw();
+        };
+
+        resetBtn.onclick = () => {
+            isBurning = false;
+            cancelAnimationFrame(animationId);
+            initFuel();
+            particles = [];
+            statusText.style.opacity = "0";
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Redraw static fuel
+            draw();
+        };
+
+        // Initial setup
+        updateUI();
+        draw();
+    </script>
+</body>
+</html>
