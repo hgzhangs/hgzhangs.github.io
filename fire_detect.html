@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卫星热点检测原理交互学习</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .canvas-container { position: relative; cursor: crosshair; overflow: hidden; border-radius: 0.75rem; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .grid-overlay { pointer-events: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 1px solid rgba(255,255,255,0.1); }
+        .control-panel { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(8px); }
+        .status-tag { padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .mode-active { border: 2px solid #3b82f6; background: rgba(59, 130, 246, 0.2); }
+        input[type=range] { accent-color: #3b82f6; }
+    </style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const katexOptions = {
+        delimiters: [
+            {left: '\\[', right: '\\]', display: true},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false,
+        strict: false,
+        trust: true
+    };
+
+    let renderTimeout;
+    function safeRender() {
+        if (renderTimeout) clearTimeout(renderTimeout);
+        renderTimeout = setTimeout(() => {
+            renderMathInElement(document.body, katexOptions);
+        }, 100);
+    }
+
+    renderMathInElement(document.body, katexOptions);
+
+    const observer = new MutationObserver((mutations) => {
+        let shouldRender = false;
+        mutations.forEach((mutation) => {
+            if (mutation.target &&
+                mutation.target.className &&
+                typeof mutation.target.className === 'string' &&
+                mutation.target.className.includes('katex')) {
+                return;
+            }
+            shouldRender = true;
+        });
+
+        if (shouldRender) {
+            safeRender();
+        }
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+    });
+
+    setInterval(() => {
+        const text = document.body.innerText;
+        if (text.includes('\\(') || text.includes('$$')) {
+            safeRender();
+        }
+    }, 2000);
+});
+</script>
+</head>
+<body class="p-4 md:p-8 flex flex-col items-center min-h-screen">
+
+    <!-- Header -->
+    <header class="w-full max-w-6xl mb-6 flex flex-col md:flex-row justify-between items-end">
+        <div>
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">卫星热点检测原理</h1>
+            <p class="text-slate-400 mt-1">遥感科学：基于多光谱与热力学约束的火源定位</p>
+        </div>
+        <div class="mt-4 md:mt-0 text-right text-xs text-slate-500 max-w-xs italic">
+            普朗克定律 & 维恩位移定律模拟
+        </div>
+    </header>
+
+    <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Visualization -->
+        <div class="lg:col-span-8 flex flex-col gap-4">
+            <div class="canvas-container bg-slate-900 border border-slate-700 aspect-video">
+                <canvas id="mapCanvas" class="w-full h-full"></canvas>
+                <!-- Scanner UI Overlay -->
+                <div id="scannerLine" class="absolute top-0 left-0 w-1 h-full bg-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.8)] hidden"></div>
+                <!-- Crosshair -->
+                <div id="crosshair" class="absolute pointer-events-none border border-white/40 w-16 h-16 rounded-sm -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+                    <div class="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+            </div>
+
+            <!-- Dashboard -->
+            <div class="control-panel p-6 rounded-xl border border-slate-700 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Band Selector -->
+                <div class="space-y-3">
+                    <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span> 观测波段选择
+                    </h3>
+                    <div class="flex flex-col gap-2">
+                        <button onclick="setBand('visible')" id="btn-visible" class="flex justify-between items-center p-2 rounded bg-slate-800 border border-slate-600 hover:border-blue-400 transition-all">
+                            <span>可见光 (0.6µm)</span>
+                            <span class="text-[10px] text-slate-500">反射率模式</span>
+                        </button>
+                        <button onclick="setBand('mir')" id="btn-mir" class="flex justify-between items-center p-2 rounded bg-slate-800 border border-slate-600 hover:border-blue-400 transition-all">
+                            <span>中红外 (3.9µm)</span>
+                            <span class="status-tag bg-orange-900/40 text-orange-400">高温敏感</span>
+                        </button>
+                        <button onclick="setBand('tir')" id="btn-tir" class="flex justify-between items-center p-2 rounded bg-slate-800 border border-slate-600 hover:border-blue-400 transition-all">
+                            <span>远红外 (11.0µm)</span>
+                            <span class="status-tag bg-blue-900/40 text-blue-400">常温背景</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Simulation Settings -->
+                <div class="space-y-4">
+                    <h3 class="text-sm font-semibold text-slate-300">环境参数</h3>
+                    <div class="space-y-2">
+                        <label class="text-xs text-slate-400 flex justify-between">
+                            云量覆盖: <span id="val-cloud">30%</span>
+                        </label>
+                        <input type="range" id="input-cloud" min="0" max="100" value="30" class="w-full">
+                        
+                        <label class="text-xs text-slate-400 flex justify-between">
+                            像元分辨率 (GSD): <span id="val-gsd">1.0km</span>
+                        </label>
+                        <input type="range" id="input-gsd" min="0.5" max="4" step="0.5" value="1.0" class="w-full">
+                    </div>
+                </div>
+
+                <!-- Detection Logic -->
+                <div class="space-y-3">
+                    <h3 class="text-sm font-semibold text-slate-300">热点判别准则</h3>
+                    <div class="bg-black/40 p-3 rounded text-[11px] font-mono leading-relaxed text-emerald-400">
+                        IF (T4 > 310K AND (T4 - T11) > 10K)<br>
+                        THEN FLAG = "HOTSPOT"<br>
+                        ELSE FLAG = "NORMAL"
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <input type="checkbox" id="chk-smoke" checked>
+                        <label for="chk-smoke" class="text-xs text-slate-400">模拟燃烧产烟 (米氏散射)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Info & Physics -->
+        <div class="lg:col-span-4 flex flex-col gap-4">
+            <div class="control-panel p-5 rounded-xl border border-slate-700 h-full">
+                <h3 class="text-lg font-bold mb-4 text-slate-200">亚像元探测分析</h3>
+                
+                <div class="mb-6">
+                    <div class="text-xs text-slate-400 mb-2">当前位置辐射特性 \(B(\lambda, T)\)</div>
+                    <div class="h-32 bg-slate-950 rounded border border-slate-800 relative flex items-end p-2 overflow-hidden">
+                        <canvas id="planckCanvas" class="w-full h-full"></canvas>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                        <span>1µm</span>
+                        <span>5µm</span>
+                        <span>10µm</span>
+                        <span>15µm</span>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                        <div class="text-[10px] uppercase tracking-wider text-blue-400 font-bold mb-1">传感器读数</div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <div class="text-xs text-slate-500">T4 (3.9µm)</div>
+                                <div id="stat-t4" class="text-xl font-bold">298.2 K</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-slate-500">T11 (11µm)</div>
+                                <div id="stat-t11" class="text-xl font-bold">295.5 K</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-sm text-slate-400 leading-snug space-y-2">
+                        <p id="info-physics">
+                            <strong class="text-slate-200 block mb-1">科学原理提示：</strong>
+                            根据<span class="text-orange-400">维恩位移定律</span> \( \lambda_{max} T = 2898 \mu m \cdot K \)，森林背景(300K)辐射峰值在10µm附近，而火场高温(800K)辐射峰值会移向中短波红外。
+                        </p>
+                        <div class="p-2 bg-amber-900/20 border border-amber-900/40 rounded text-amber-200 text-xs" id="warning-box">
+                            注：热红外无法穿透含水厚云层，探测将受阻。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Constants & Config
+        const CONFIG = {
+            gridSize: 100,
+            forestColor: '#1a472a',
+            fireColor: '#ff4d00',
+            smokeColor: 'rgba(100, 116, 139, 0.6)',
+            cloudColor: 'rgba(255, 255, 255, 0.85)',
+            bands: {
+                visible: { wave: 0.6, label: '可见光' },
+                mir: { wave: 3.9, label: '中红外' },
+                tir: { wave: 11.0, label: '远红外' }
+            }
+        };
+
+        let state = {
+            currentBand: 'visible',
+            cloudDensity: 0.3,
+            gsd: 1.0,
+            showSmoke: true,
+            mouseX: 0,
+            mouseY: 0,
+            fires: [],
+            clouds: [],
+            scanX: 0
+        };
+
+        const canvas = document.getElementById('mapCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const planckCanvas = document.getElementById('planckCanvas');
+        const pCtx = planckCanvas.getContext('2d');
+
+        // Initialize World
+        function initWorld() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            planckCanvas.width = planckCanvas.offsetWidth;
+            planckCanvas.height = planckCanvas.offsetHeight;
+
+            // Generate random fires
+            state.fires = [];
+            for(let i=0; i<8; i++) {
+                state.fires.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: 10 + Math.random() * 20,
+                    temp: 750 + Math.random() * 400 // Kelvin
+                });
+            }
+
+            // Generate clouds
+            state.clouds = [];
+            for(let i=0; i<15; i++) {
+                state.clouds.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    w: 100 + Math.random() * 200,
+                    h: 60 + Math.random() * 100,
+                    vx: 0.2 + Math.random() * 0.3
+                });
+            }
+        }
+
+        // Planck's Law Implementation
+        function getRadiance(lambda, T) {
+            const h = 6.626e-34;
+            const c = 3.0e8;
+            const k = 1.38e-23;
+            const l = lambda * 1e-6;
+            const exponent = (h * c) / (l * k * T);
+            if (exponent > 100) return 0;
+            return (2 * h * c * c) / (Math.pow(l, 5) * (Math.exp(exponent) - 1));
+        }
+
+        function setBand(b) {
+            state.currentBand = b;
+            document.querySelectorAll('[id^="btn-"]').forEach(btn => btn.classList.remove('mode-active'));
+            document.getElementById(`btn-${b}`).classList.add('mode-active');
+        }
+
+        // Main Rendering Loop
+        function render() {
+            ctx.fillStyle = '#0a1a0f'; // Dark forest base
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Simulation Resolution (GSD)
+            const step = 8 * state.gsd;
+            
+            for (let x = 0; x < canvas.width; x += step) {
+                for (let y = 0; y < canvas.height; y += step) {
+                    let pixelTemp = 295; // Base temp (22 C)
+                    let isFire = false;
+                    let fireRatio = 0;
+
+                    // Calculate sub-pixel fire contribution
+                    state.fires.forEach(f => {
+                        const dist = Math.sqrt((x - f.x)**2 + (y - f.y)**2);
+                        if (dist < f.size) {
+                            const ratio = Math.pow(1 - dist/f.size, 2);
+                            fireRatio = Math.max(fireRatio, ratio);
+                            isFire = true;
+                        }
+                    });
+
+                    // Atmosphere effects
+                    let cloudAlpha = 0;
+                    state.clouds.forEach(c => {
+                        if (x > c.x && x < c.x + c.w && y > c.y && y < c.y + c.h) {
+                            cloudAlpha = state.cloudDensity;
+                        }
+                    });
+
+                    // Determine visual color based on band
+                    if (state.currentBand === 'visible') {
+                        let r = 26, g = 71, b = 42; // Forest green
+                        if (isFire && state.showSmoke) {
+                            // Visible light scattered by smoke
+                            r = 120; g = 130; b = 140;
+                        }
+                        if (cloudAlpha > 0) {
+                            r = r*(1-cloudAlpha) + 255*cloudAlpha;
+                            g = g*(1-cloudAlpha) + 255*cloudAlpha;
+                            b = b*(1-cloudAlpha) + 255*cloudAlpha;
+                        }
+                        ctx.fillStyle = `rgb(${r},${g},${b})`;
+                    } 
+                    else if (state.currentBand === 'mir') {
+                        // 3.9um is very sensitive to fire
+                        // Integrate radiance for sub-pixel
+                        const L_bg = getRadiance(3.9, 295);
+                        const L_fire = getRadiance(3.9, 1000);
+                        const L_total = (1 - fireRatio) * L_bg + fireRatio * L_fire;
+                        
+                        // Scale for display
+                        let intensity = Math.min(255, L_total / 1e6 * 2);
+                        if (cloudAlpha > 0.5) intensity *= (1-cloudAlpha); // Clouds block IR
+                        
+                        ctx.fillStyle = `rgb(${intensity * 1.5}, ${intensity * 0.5}, ${intensity * 0.2})`;
+                    } 
+                    else if (state.currentBand === 'tir') {
+                        // 11um is stable background
+                        const L_bg = getRadiance(11, 295);
+                        const L_fire = getRadiance(11, 1000);
+                        const L_total = (1 - fireRatio) * L_bg + fireRatio * L_fire;
+                        
+                        let intensity = Math.min(255, L_total / 5e6 * 20);
+                        if (cloudAlpha > 0.5) intensity *= (1-cloudAlpha);
+                        ctx.fillStyle = `rgb(${intensity}, ${intensity}, ${intensity * 1.2})`;
+                    }
+
+                    ctx.fillRect(x, y, step, step);
+                }
+            }
+
+            // Update UI
+            updateStats();
+            drawPlanckCurve();
+
+            // Animate clouds
+            state.clouds.forEach(c => {
+                c.x += c.vx;
+                if (c.x > canvas.width) c.x = -c.w;
+            });
+
+            requestAnimationFrame(render);
+        }
+
+        function updateStats() {
+            let fireRatio = 0;
+            state.fires.forEach(f => {
+                const dist = Math.sqrt((state.mouseX - f.x)**2 + (state.mouseY - f.y)**2);
+                if (dist < f.size) fireRatio = Math.max(fireRatio, Math.pow(1 - dist/f.size, 2));
+            });
+
+            let cloudCover = 0;
+            state.clouds.forEach(c => {
+                if (state.mouseX > c.x && state.mouseX < c.x + c.w && state.mouseY > c.y && state.mouseY < c.y + c.h) {
+                    cloudCover = state.cloudDensity;
+                }
+            });
+
+            // Brightness Temperature calculation
+            const getBT = (lambda, fireF) => {
+                const L = (1-fireF)*getRadiance(lambda, 295) + fireF*getRadiance(lambda, 900);
+                const h = 6.626e-34, c = 3.0e8, k = 1.38e-23;
+                const wave = lambda * 1e-6;
+                const T = (h*c)/(wave*k * Math.log((2*h*c*c)/(L*Math.pow(wave, 5)) + 1));
+                return cloudCover > 0.7 ? 240 : T; // Cloud top temperature
+            };
+
+            const t4 = getBT(3.9, fireRatio);
+            const t11 = getBT(11, fireRatio);
+
+            document.getElementById('stat-t4').innerText = t4.toFixed(1) + ' K';
+            document.getElementById('stat-t11').innerText = t11.toFixed(1) + ' K';
+            
+            const warningBox = document.getElementById('warning-box');
+            if (cloudCover > 0.7) {
+                warningBox.innerText = "警告：厚云层遮挡，红外信号来自云顶(约240K)";
+                warningBox.classList.add('bg-red-900/20', 'text-red-300');
+            } else {
+                warningBox.innerText = "注：热红外可穿透薄烟，但无法穿透水汽厚云。";
+                warningBox.classList.remove('bg-red-900/20', 'text-red-300');
+            }
+        }
+
+        function drawPlanckCurve() {
+            pCtx.clearRect(0, 0, planckCanvas.width, planckCanvas.height);
+            
+            const drawCurve = (temp, color, width) => {
+                pCtx.beginPath();
+                pCtx.strokeStyle = color;
+                pCtx.lineWidth = width;
+                for (let x = 0; x < planckCanvas.width; x++) {
+                    const wave = 0.5 + (x / planckCanvas.width) * 15;
+                    const rad = getRadiance(wave, temp);
+                    const y = planckCanvas.height - (rad / 1.5e7) * planckCanvas.height;
+                    if (x === 0) pCtx.moveTo(x, y);
+                    else pCtx.lineTo(x, y);
+                }
+                pCtx.stroke();
+            };
+
+            drawCurve(295, '#475569', 1); // Background 300K
+            drawCurve(600, '#f97316', 2); // Fire 600K (smoldering)
+            
+            // Current wavelength marker
+            const currentWave = CONFIG.bands[state.currentBand].wave;
+            const markerX = ((currentWave - 0.5) / 15) * planckCanvas.width;
+            pCtx.axit = '#3b82f6';
+            pCtx.fillStyle = '#3b82f6';
+            pCtx.fillRect(markerX - 1, 0, 2, planckCanvas.height);
+        }
+
+        // Listeners
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            state.mouseX = e.clientX - rect.left;
+            state.mouseY = e.clientY - rect.top;
+            
+            const cross = document.getElementById('crosshair');
+            cross.style.left = `${state.mouseX}px`;
+            cross.style.top = `${state.mouseY}px`;
+        });
+
+        document.getElementById('input-cloud').oninput = (e) => {
+            state.cloudDensity = e.target.value / 100;
+            document.getElementById('val-cloud').innerText = e.target.value + '%';
+        };
+
+        document.getElementById('input-gsd').oninput = (e) => {
+            state.gsd = parseFloat(e.target.value);
+            document.getElementById('val-gsd').innerText = state.gsd.toFixed(1) + 'km';
+            const cross = document.getElementById('crosshair');
+            cross.style.width = cross.style.height = `${16 * state.gsd}px`;
+        };
+
+        document.getElementById('chk-smoke').onchange = (e) => {
+            state.showSmoke = e.target.checked;
+        };
+
+        window.addEventListener('resize', initWorld);
+
+        // Initial Start
+        initWorld();
+        setBand('visible');
+        render();
+
+    </script>
+
+    <!-- Math Notation Section -->
+    <footer class="w-full max-w-6xl mt-8 pt-6 border-t border-slate-800 text-sm text-slate-400">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+                <h4 class="font-bold text-slate-200 mb-2">1. 亚像元能量模型 (Sub-pixel Model)</h4>
+                <p>当火场面积 \(A_f\) 小于像元面积 \(A_p\) 时，像元总辐射 \(L_{total}\) 为：</p>
+                <p class="my-2 text-blue-400">\[ L_{\lambda, pix} = f \cdot B(\lambda, T_{fire}) + (1-f) \cdot B(\lambda, T_{bg}) \]</p>
+                <p>其中 \(f = A_f / A_p\) 为火场面积占比。在中红外（3.9µm）波段，由于指数级的辐射增强，即使 \(f < 0.01\)，也能显著提升亮度温度。</p>
+            </div>
+            <div>
+                <h4 class="font-bold text-slate-200 mb-2">2. 双通道判别法</h4>
+                <p>为了排除由于地表反射阳光或高反射背景（如裸岩）造成的干扰，采用差值判据：</p>
+                <p class="my-2 text-emerald-400">\[ \Delta T = T_{3.9} - T_{11.0} > \Delta T_{threshold} \]</p>
+                <p>火灾在 \(3.9\mu m\) 的增量远大于 \(11\mu m\)，而常规热辐射源在两个波段的亮度温度接近。</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
